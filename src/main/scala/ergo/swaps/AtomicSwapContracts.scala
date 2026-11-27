@@ -29,7 +29,7 @@ import sigmastate.interpreter.Interpreter.ScriptEnv
   */
 object AtomicSwapContracts {
 
-  def compileV6(source: String, env: ScriptEnv = Map.empty): (ErgoTree, Array[Byte]) = {
+  def compileV6(source: String, env: ScriptEnv = Map.empty): (ErgoTree, Array[Byte]) = this.synchronized {
     VersionContext.withVersions(VersionContext.V6SoftForkVersion, VersionContext.V6SoftForkVersion) {
       implicit val IR: CompiletimeIRContext = new CompiletimeIRContext
       val compiler = SigmaCompiler(ErgoAddressEncoder.MainnetNetworkPrefix)

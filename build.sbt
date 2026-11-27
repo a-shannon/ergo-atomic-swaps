@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
       "org.scorexfoundation" %% "sigma-state" % "6.0.3",
       "org.scalatest" %% "scalatest" % "3.2.20" % Test
     ),
+    Test / parallelExecution := false,
     scalacOptions ++= Seq(
       "-deprecation",
       "-feature",

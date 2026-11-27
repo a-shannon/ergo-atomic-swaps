@@ -7,7 +7,15 @@
 
 Trustless cross-chain swap primitives on **Ergo Sigma v6 (`treeVersion = 3`)** featuring both hardened Bitcoin/Lightning/EVM-compatible SHA-256 HTLCs and **Zero-Hash Scriptless Adaptor-Signature PTLCs (`83 B` ErgoTree!)** that break on-chain cross-chain hash linkability.
 
-Both reference contracts are verified **100% byte-for-byte** against the official Ergo v6 reference node (`ergo-6.0.3.jar`).
+Both reference contracts are verified **100% byte-for-byte** against the official Ergo v6 reference node (`ergo-6.0.3.jar`), and the live web app connects directly to **Ergo Testnet** (`api-testnet.ergoplatform.com` / local node) + **Nautilus EIP-12** using `docs/ergo-testnet-kit.js` (proven byte-for-byte against Scala `sigma-state 6.0.3` in `TestnetKitParitySpec`).
+
+---
+
+## Live Ergo Testnet + Nautilus EIP-12 Support
+
+Open [the live lab](https://a-shannon.github.io/ergo-atomic-swaps/) to:
+- Fetch live Ergo Testnet block height and watch real unspent PTLC (`83 B`) and HTLC (`255 B`) boxes at both verified Testnet P2S addresses.
+- Connect **Nautilus** (hard-guarded to Testnet only) to build, sign, and broadcast real `ScriptlessAdaptorSwap` or `CrossChainHashSwap` lock transactions — or export offline EIP-12 JSON without any wallet installed.
 
 ---
 

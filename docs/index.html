@@ -3,41 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ergo Atomic Swaps — Cross-Chain HTLC &amp; Scriptless Adaptor PTLC Lab</title>
+  <title>Ergo Atomic Swaps — Cross-Chain HTLC &amp; Scriptless Adaptor PTLC (Live Testnet + Nautilus)</title>
   <style>
     :root {
       --bg: #070b14; --panel: #0f172a; --panel2: #151f38; --border: #253459;
-      --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #f59e0b; --violet: #a855f7;
+      --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --bad: #ef4444; --warn: #f59e0b; --violet: #a855f7;
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: radial-gradient(circle at top center, #251946 0%, var(--bg) 52%); color: var(--text); line-height: 1.55; }
     header { padding: 34px 24px 24px; border-bottom: 1px solid var(--border); background: rgba(7,11,20,0.9); }
-    .wrap { max-width: 1120px; margin: 0 auto; }
+    .wrap { max-width: 1140px; margin: 0 auto; }
     .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(168,85,247,0.16); color: #e9d5ff; border: 1px solid rgba(168,85,247,0.45); }
     .badge.green { background: rgba(34,197,94,0.16); color: #86efac; border-color: rgba(34,197,94,0.45); }
     .badge.blue { background: rgba(56,189,248,0.15); color: #7dd3fc; border-color: rgba(56,189,248,0.4); }
+    .badge.live { background: rgba(245,158,11,0.18); color: #fde68a; border-color: rgba(245,158,11,0.5); }
     h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.02em; }
-    .sub { color: var(--muted); margin: 0; max-width: 820px; font-size: 15px; }
+    .sub { color: var(--muted); margin: 0; max-width: 860px; font-size: 15px; }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
     .metric { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; }
     .metric .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .metric .v { font-size: 21px; font-weight: 800; color: #fff; margin-top: 2px; }
     .metric .s { font-size: 12px; color: #86efac; }
-    main { max-width: 1120px; margin: 24px auto 52px; padding: 0 24px; }
+    main { max-width: 1140px; margin: 24px auto 52px; padding: 0 24px; }
     .panel { background: var(--panel2); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+    .panel.live-panel { border-color: rgba(168,85,247,0.55); background: linear-gradient(180deg, rgba(28,20,56,0.96), var(--panel2)); }
     .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+    .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     h2 { margin: 0 0 8px; font-size: 20px; }
+    h3 { margin: 14px 0 6px; font-size: 15px; color: #cbd5e1; }
     p.desc { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
-    label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 10px; margin-bottom: 4px; text-transform: uppercase; }
-    input { width: 100%; background: #0a1020; border: 1px solid #293c66; border-radius: 8px; padding: 8px 10px; color: #fff; font-family: var(--mono); font-size: 12.5px; }
+    .box { font-family: var(--mono); font-size: 12px; background: #0a1020; border: 1px solid #1e2d4f; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; word-break: break-all; }
+    label { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 10px; margin-bottom: 4px; text-transform: uppercase; }
+    input, select { width: 100%; background: #0a1020; border: 1px solid #293c66; border-radius: 8px; padding: 8px 10px; color: #fff; font-family: var(--mono); font-size: 12.5px; }
     .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .btn { border: none; border-radius: 8px; padding: 9px 14px; font-weight: 800; font-size: 13px; cursor: pointer; background: var(--accent); color: #051324; }
+    .btn:hover { filter: brightness(1.08); }
     .btn.purple { background: var(--violet); color: #fff; }
     .btn.ok { background: var(--ok); color: #042410; }
-    .console { background: #060a13; border: 1px solid #1e2d4f; border-radius: 12px; padding: 13px; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; max-height: 290px; overflow-y: auto; margin-top: 12px; }
-    .okt { color: #86efac; } .infot { color: #7dd3fc; } .warnt { color: #fde68a; }
+    .btn.sec { background: #1e2d4f; color: #e2e8f0; }
+    .console { background: #060a13; border: 1px solid #1e2d4f; border-radius: 12px; padding: 13px; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; max-height: 290px; overflow-y: auto; margin-top: 12px; word-break: break-word; }
+    .okt { color: #86efac; } .infot { color: #7dd3fc; } .warnt { color: #fde68a; } .badt { color: #fca5a5; }
     table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
     th, td { border-bottom: 1px solid #1e2d4f; padding: 8px 10px; text-align: left; }
     th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
@@ -51,22 +58,106 @@
     <div class="badges">
       <span class="badge">Ergo Sigma v6 (treeVersion = 3)</span>
       <span class="badge green">2 / 2 Byte-for-Byte Verified on ergo-6.0.3.jar</span>
+      <span class="badge live">LIVE Ergo Testnet + Nautilus EIP-12 Connected</span>
       <span class="badge blue">Zero On-Chain Hash Linkability · 83 B PTLC · MIT</span>
     </div>
     <h1>Ergo Atomic Swaps — SHA-256 HTLC &amp; Scriptless Adaptor PTLC</h1>
     <p class="sub">
-      Walk through a live Schnorr Adaptor-Signature extraction (<code>t = (s - s') mod n</code>) that unlocks an <b>83-byte</b> zero-hash Ergo PTLC box, compare multi-hop point re-randomization against linkable HTLCs, and test gasless submarine-swap relayers.
+      Walk through a live Schnorr Adaptor-Signature extraction (<code>t = (s - s') mod n</code>) that unlocks an <b>83-byte</b> zero-hash Ergo PTLC box, test gasless submarine-swap relayers, and <strong>lock real PTLC / HTLC swap boxes on live Ergo Testnet via Nautilus EIP-12</strong>!
     </p>
     <div class="metrics">
       <div class="metric"><div class="k">ScriptlessAdaptorSwap</div><div class="v">83 B · 0.10%</div><div class="s">88 B proof · ZERO hash on Ergo!</div></div>
-      <div class="metric"><div class="k">Multi-Hop Re-Randomize</div><div class="v">T2 = T1 + δ·G</div><div class="s">Breaks cross-hop chain surveillance</div></div>
       <div class="metric"><div class="k">CrossChainHashSwap</div><div class="v">255 B · 0.05%</div><div class="s">BTC/LN/EVM SHA-256 + token preservation</div></div>
       <div class="metric"><div class="k">Gasless Submarine Relay</div><div class="v">175 cost (0.02%)</div><div class="s">0 B claimant proof · SELF.id bound</div></div>
+      <div class="metric"><div class="k">Live Ergo Testnet</div><div class="v" id="liveHeightMetric">Connecting…</div><div class="s" id="liveSourceMetric">api-testnet.ergoplatform.com</div></div>
     </div>
   </div>
 </header>
 
 <main>
+  <!-- LIVE TESTNET + NAUTILUS EIP-12 SWAP PANEL -->
+  <section class="panel live-panel">
+    <h2>Live Ergo Testnet &amp; Nautilus EIP-12 Swap Lock (Zero Backend · Testnet Safety Guard)</h2>
+    <p class="desc">
+      Powered by <code>ergo-testnet-kit.js</code> (proven byte-for-byte against Scala <code>sigma-state 6.0.3</code> in CI).
+      Watch live Testnet PTLC / HTLC boxes, compute real SHA-256 hashlocks &amp; Blake2b-256 submarine-relay payHashes, export offline EIP-12 JSON, or sign &amp; broadcast live on Ergo Testnet with <strong>Nautilus</strong> (Mainnet is hard-blocked).
+    </p>
+
+    <div class="grid2">
+      <div>
+        <label>Ergo Testnet Explorer or Local Node API URL</label>
+        <input id="tnApiUrl" value="https://api-testnet.ergoplatform.com" />
+        <div class="row">
+          <button class="btn" onclick="refreshTestnet()">Refresh Testnet Height &amp; Watch Swaps</button>
+          <button class="btn ok" onclick="connectNautilusWallet()">Connect Nautilus (Testnet Only)</button>
+        </div>
+        <div class="box" id="walletStatusBox" style="margin-top:12px;">
+          Wallet: <b>Not connected</b> (Offline JSON Export &amp; Live Swap Box Watcher work without a wallet!)
+        </div>
+      </div>
+
+      <div>
+        <label>Verified Testnet P2S Contracts (Compiled on ergo-6.0.3.jar · treeVersion=3)</label>
+        <div class="box" id="p2sSummaryBox"></div>
+      </div>
+    </div>
+
+    <h3>Build &amp; Sign Real EIP-12 Atomic Swap Lock Transaction (Ergo Testnet)</h3>
+    <div class="grid3">
+      <div>
+        <label>Swap Contract</label>
+        <select id="swContract" onchange="toggleSwapFields()">
+          <option value="ptlc">ScriptlessAdaptorSwap (83 B · Zero-Hash PTLC)</option>
+          <option value="htlc">CrossChainHashSwap (255 B · SHA-256 HTLC + Gasless Relay)</option>
+        </select>
+      </div>
+      <div>
+        <label>Swap Amount to Lock (Testnet tERG)</label>
+        <input id="swAmountErg" type="number" value="0.1" min="0.01" step="0.05" />
+      </div>
+      <div>
+        <label>Refund Timeout (+Blocks from Live Height)</label>
+        <input id="swTimeoutOffset" type="number" value="60" min="2" />
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Claimant Address / PubKey (P2PK 3W… or 66-hex PubKey)</label>
+        <input id="swClaimant" value="02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5" />
+      </div>
+      <div>
+        <label>Maker Refund Address / PubKey (auto-filled by Nautilus)</label>
+        <input id="swMaker" value="0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798" />
+      </div>
+    </div>
+
+    <div id="ptlcFields">
+      <label>Adaptor Point T = t·G (33-byte compressed secp256k1 hex — verified Hop-1 point pre-filled)</label>
+      <input id="swAdaptorPoint" value="03cb8f2f4901e5dc0610a562309a0ba238289edd5a6a819a115ca3b2ac802e7589" />
+    </div>
+
+    <div id="htlcFields" class="grid2" style="display:none;">
+      <div>
+        <label>Secret Preimage (32B hex or UTF-8 text — auto SHA-256 hashed into R4)</label>
+        <input id="swPreimage" value="BTC_LN_INVOICE_PREIMAGE_SECRET_42" />
+      </div>
+      <div>
+        <label>Max Gasless Relayer Fee (tERG, stored in R7(1))</label>
+        <input id="swMaxRelayFee" type="number" value="0.005" min="0.001" step="0.001" />
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn purple" onclick="buildLiveSwapTx(false)">Build EIP-12 Swap Lock JSON</button>
+      <button class="btn ok" onclick="buildLiveSwapTx(true)">Sign &amp; Broadcast Swap on Testnet via Nautilus</button>
+      <button class="btn sec" onclick="copyBuiltJson()">Copy EIP-12 JSON</button>
+      <button class="btn sec" onclick="downloadBuiltJson()">Download .json</button>
+    </div>
+    <div class="console" id="tnConsole"></div>
+  </section>
+
+  <!-- INTERACTIVE SIMULATORS -->
   <div class="grid2">
     <section class="panel">
       <h2>1. Live Adaptor Signature Extraction (BigInt mod n)</h2>
@@ -83,7 +174,7 @@
 
     <section class="panel">
       <h2>2. HTLC vs. Scriptless PTLC Privacy Comparison</h2>
-      <p class="desc">Why Ergo's native <code>proveDlog(claimantPk) && proveDlog(T)</code> defeats cross-chain surveillance bots:</p>
+      <p class="desc">Why Ergo's native <code>proveDlog(claimantPk) &amp;&amp; proveDlog(T)</code> defeats cross-chain surveillance bots:</p>
       <table>
         <thead><tr><th>Property</th><th>SHA-256 HTLC (255 B)</th><th>Scriptless PTLC (83 B)</th></tr></thead>
         <tbody>
@@ -106,10 +197,203 @@
 </main>
 
 <footer>
-  Open-Source Reference Lab · <a href="https://github.com/a-shannon/ergo-atomic-swaps">github.com/a-shannon/ergo-atomic-swaps</a> · <a href="https://a-shannon.github.io/">All Ergo Sigma v6 Labs</a> · MIT License
+  Open-Source Reference Lab · <a href="https://github.com/a-shannon/ergo-atomic-swaps">github.com/a-shannon/ergo-atomic-swaps</a> · <a href="https://a-shannon.github.io/">All Ergo Sigma v6 Labs</a> · MIT License · Testnet deployment tooling (not externally audited for mainnet custody).
 </footer>
 
+<script src="./ergo-testnet-kit.js"></script>
 <script>
+// Exact ergo-6.0.3.jar verified Sigma v6 (treeVersion = 3) ErgoTree bytes:
+const CONTRACTS = {
+  ptlc: {
+    name: "ScriptlessAdaptorSwap (83 B PTLC)",
+    treeHex: "1b5101060100d804d6017ea305d602e4c6a70705d603e4c6a70407d604db6a01ddeb02ea02ea02d1ed8f72017202ed9472039f720473009472037204cde4c6a70507cd7203ea02d19272017202cde4c6a70607"
+  },
+  htlc: {
+    name: "CrossChainHashSwap (255 B HTLC)",
+    treeHex: "1bfc010d0440040404400504040004400500050204020400040201000504d809d601e4c6a7040ed602e4c6a70711d603e4c6a7080ed604eded93b17201730093b17202730193b172037302d605e5e300057303d606b27202730400d607830002d608e5e3010e7207d609ed93b17208730593cc72087201eb02eb02ea02d1ededed720493720573068f7ea30572067209cde4c6a70507d195edededed720493720573078f7ea3057206720992b1a57308d801d60ab2a5730900ededed92c1720a99c1a7b27202730a0093db6308720adb6308a793cbc2720a720393e5c6720a040e7207c5a7730bea02d1eded7204937205730c927ea3057206cde4c6a70607"
+  }
+};
+
+const KIT = window.ErgoTestnetKit;
+const P2S_PTLC = KIT.encodeP2S(CONTRACTS.ptlc.treeHex, "testnet");
+const P2S_HTLC = KIT.encodeP2S(CONTRACTS.htlc.treeHex, "testnet");
+let liveHeight = 666000;
+let walletCtx = null;
+let lastBuiltJson = "";
+
+function tnLog(msg, cls = "infot") {
+  const el = document.getElementById("tnConsole");
+  const d = document.createElement("div");
+  d.className = cls;
+  d.textContent = msg;
+  el.prepend(d);
+}
+
+function renderP2SSummary(ptlcCount = "?", htlcCount = "?") {
+  const exp = KIT.TESTNET_EXPLORER_WEB;
+  document.getElementById("p2sSummaryBox").innerHTML =
+    `<b>ScriptlessAdaptorSwap (83 B PTLC)</b> · Live boxes: <b>${ptlcCount}</b> · ` +
+    `<a href="${exp}/addresses/${P2S_PTLC}" target="_blank" rel="noopener">Explorer ↗</a><br>` +
+    `<span style="color:#94a3b8">${P2S_PTLC}</span><br><br>` +
+    `<b>CrossChainHashSwap (255 B HTLC)</b> · Live boxes: <b>${htlcCount}</b> · ` +
+    `<a href="${exp}/addresses/${P2S_HTLC}" target="_blank" rel="noopener">Explorer ↗</a><br>` +
+    `<span style="color:#94a3b8">${P2S_HTLC.slice(0, 46)}…${P2S_HTLC.slice(-14)}</span>`;
+}
+
+function resolveKey(input, label) {
+  const s = String(input || "").trim();
+  if (/^(0x)?[0-9a-fA-F]{66}$/.test(s)) {
+    const pkHex = s.replace(/^0x/i, "").toLowerCase();
+    const treeHex = "0008cd" + pkHex;
+    return { pubKeyHex: pkHex, payHashHex: KIT.toHex(KIT.blake2b256(KIT.fromHex(treeHex))) };
+  }
+  const dec = KIT.decodeAddress(s);
+  if (!dec.pubKeyHex) throw new Error(`${label} must be a 33-byte compressed secp256k1 pubkey hex or a P2PK Ergo address (got ${dec.type}).`);
+  return { pubKeyHex: dec.pubKeyHex, payHashHex: dec.payHashHex };
+}
+
+function toggleSwapFields() {
+  const kind = document.getElementById("swContract").value;
+  document.getElementById("ptlcFields").style.display = kind === "ptlc" ? "block" : "none";
+  document.getElementById("htlcFields").style.display = kind === "htlc" ? "grid" : "none";
+}
+
+async function refreshTestnet() {
+  const apiBase = document.getElementById("tnApiUrl").value.trim() || KIT.DEFAULT_TESTNET_API;
+  try {
+    const st = await KIT.fetchNetworkState(apiBase);
+    liveHeight = st.height;
+    document.getElementById("liveHeightMetric").textContent = `#${st.height.toLocaleString()}`;
+    document.getElementById("liveSourceMetric").textContent = `${st.source} · blockVer ${st.blockVersion || "v6"}`;
+    const [pBoxes, hBoxes] = await Promise.all([
+      KIT.fetchUnspentBoxes(P2S_PTLC, apiBase, 10),
+      KIT.fetchUnspentBoxes(P2S_HTLC, apiBase, 10)
+    ]);
+    renderP2SSummary(pBoxes.total, hBoxes.total);
+    tnLog(`[Testnet Live ✔] Height #${st.height.toLocaleString()} (${st.apiBase}) · PTLC boxes=${pBoxes.total} · HTLC boxes=${hBoxes.total}`, "okt");
+    for (const b of pBoxes.items.slice(0, 3)) {
+      tnLog(`  [PTLC Box] ${b.boxId.slice(0, 16)}… · ${(Number(b.value)/1e9).toFixed(4)} tERG · created @ #${b.creationHeight}`, "infot");
+    }
+    for (const b of hBoxes.items.slice(0, 3)) {
+      tnLog(`  [HTLC Box] ${b.boxId.slice(0, 16)}… · ${(Number(b.value)/1e9).toFixed(4)} tERG · created @ #${b.creationHeight}`, "infot");
+    }
+  } catch (e) {
+    document.getElementById("liveHeightMetric").textContent = "Offline";
+    tnLog(`[Testnet Fetch Error] ${e.message}`, "badt");
+  }
+}
+
+async function connectNautilusWallet() {
+  try {
+    walletCtx = await KIT.connectNautilus({ requireTestnet: true });
+    liveHeight = walletCtx.height || liveHeight;
+    document.getElementById("swMaker").value = walletCtx.changeAddress;
+    document.getElementById("walletStatusBox").innerHTML =
+      `<span class="okt"><b>✔ Nautilus Connected (Ergo Testnet)</b></span> · Balance: <b>${(Number(walletCtx.balanceNano)/1e9).toFixed(4)} tERG</b> · UTXOs: <b>${walletCtx.utxos.length}</b><br>` +
+      `Address: <code>${walletCtx.changeAddress}</code><br>PubKey (33B): <code>${walletCtx.pubKeyHex}</code>`;
+    tnLog(`[Nautilus Testnet ✔] Connected ${walletCtx.changeAddress.slice(0, 14)}… · Maker Refund key auto-populated!`, "okt");
+  } catch (e) {
+    tnLog(`[Nautilus] ${e.message}`, "badt");
+  }
+}
+
+async function buildLiveSwapTx(submitViaNautilus) {
+  try {
+    const kind = document.getElementById("swContract").value;
+    const lockNano = BigInt(Math.round(Number(document.getElementById("swAmountErg").value || 0.1) * 1e9));
+    const offset = BigInt(parseInt(document.getElementById("swTimeoutOffset").value, 10) || 60);
+    const refundH = BigInt(liveHeight) + offset;
+    const claimant = resolveKey(document.getElementById("swClaimant").value, "Claimant");
+    const maker = resolveKey(document.getElementById("swMaker").value, "Maker");
+
+    let contractHex, registers, summary;
+    if (kind === "ptlc") {
+      const ptHex = document.getElementById("swAdaptorPoint").value.trim().replace(/^0x/i, "");
+      if (!/^[0-9a-fA-F]{66}$/.test(ptHex)) throw new Error("Adaptor Point T must be a 33-byte (66 hex chars) compressed secp256k1 point.");
+      contractHex = CONTRACTS.ptlc.treeHex;
+      registers = {
+        R4: KIT.Sigma.encodeGroupElement(ptHex),
+        R5: KIT.Sigma.encodeGroupElement(claimant.pubKeyHex),
+        R6: KIT.Sigma.encodeGroupElement(maker.pubKeyHex),
+        R7: KIT.Sigma.encodeLong(refundH)
+      };
+      summary = `ScriptlessAdaptorSwap PTLC (${(Number(lockNano)/1e9).toFixed(3)} tERG, refund @ #${refundH})`;
+    } else {
+      const preStr = document.getElementById("swPreimage").value.trim();
+      const preBytes = /^(0x)?[0-9a-fA-F]{64}$/.test(preStr) ? KIT.fromHex(preStr) : new TextEncoder().encode(preStr);
+      const hashBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", preBytes));
+      const maxFeeNano = BigInt(Math.round(Number(document.getElementById("swMaxRelayFee").value || 0.005) * 1e9));
+      contractHex = CONTRACTS.htlc.treeHex;
+      registers = {
+        R4: KIT.Sigma.encodeByteArray(hashBytes),
+        R5: KIT.Sigma.encodeGroupElement(claimant.pubKeyHex),
+        R6: KIT.Sigma.encodeGroupElement(maker.pubKeyHex),
+        R7: KIT.Sigma.encodeLongArray([refundH, maxFeeNano]),
+        R8: KIT.Sigma.encodeByteArray(claimant.payHashHex)
+      };
+      summary = `CrossChainHashSwap HTLC (${(Number(lockNano)/1e9).toFixed(3)} tERG, sha256=${KIT.toHex(hashBytes).slice(0,16)}…, refund @ #${refundH})`;
+    }
+
+    let unsignedTx;
+    if (walletCtx) {
+      unsignedTx = KIT.buildEip12LockTx({
+        utxos: walletCtx.utxos,
+        changeAddress: walletCtx.changeAddress,
+        contractErgoTreeHex: contractHex,
+        lockNanoErg: lockNano,
+        registers,
+        creationHeight: liveHeight
+      });
+    } else {
+      if (submitViaNautilus) throw new Error("Connect Nautilus (Testnet) first before signing & broadcasting.");
+      unsignedTx = {
+        note: "Offline EIP-12 Swap Output Preview (connect Nautilus Testnet to auto-select real UTXOs & change)",
+        network: "ergo-testnet",
+        contractP2S: KIT.encodeP2S(contractHex, "testnet"),
+        inputs: [],
+        dataInputs: [],
+        outputs: [
+          {
+            value: lockNano.toString(),
+            ergoTree: contractHex,
+            assets: [],
+            additionalRegisters: registers,
+            creationHeight: liveHeight
+          }
+        ]
+      };
+    }
+
+    lastBuiltJson = JSON.stringify(unsignedTx, null, 2);
+    tnLog(`[EIP-12 Built ✔] ${summary}\n${lastBuiltJson}`, "okt");
+
+    if (submitViaNautilus) {
+      tnLog(`[Nautilus] Requesting signature for ${summary}…`, "warnt");
+      const res = await KIT.signAndSubmitNautilus(unsignedTx);
+      tnLog(`[BROADCAST SUCCESS ✔] Testnet TxId: ${res.txId}\n  Explorer: ${res.explorerUrl}`, "okt");
+      setTimeout(refreshTestnet, 3500);
+    }
+  } catch (e) {
+    tnLog(`[Build / Sign Error] ${e.message}`, "badt");
+  }
+}
+
+function copyBuiltJson() {
+  if (!lastBuiltJson) { tnLog("[Info] Build an EIP-12 swap tx first.", "warnt"); return; }
+  if (navigator.clipboard) navigator.clipboard.writeText(lastBuiltJson);
+  tnLog("[Copied ✔] EIP-12 JSON copied to clipboard.", "okt");
+}
+
+function downloadBuiltJson() {
+  if (!lastBuiltJson) { tnLog("[Info] Build an EIP-12 swap tx first.", "warnt"); return; }
+  const blob = new Blob([lastBuiltJson], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `ergo-testnet-${document.getElementById("swContract").value}-swap.json`;
+  a.click();
+}
+
+// --- EXISTING INTERACTIVE SIMULATORS ---
 const N = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const modN = x => ((x % N) + N) % N;
 
@@ -147,8 +431,11 @@ async function simHtlc() {
     `  OUTPUTS(1) → Relayer:  ${fee.toFixed(4)} ERG (<= maxRelayerFee)\n` +
     `  Proof = 0 B | Measured BlockCost = 175 (0.02% of 1M)</div>`;
 }
+
+renderP2SSummary();
 runAdaptor();
 simHtlc();
+refreshTestnet();
 </script>
 </body>
 </html>

@@ -17,5 +17,8 @@ jobs:
           java-version: '17'
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      - name: Compile, test, and run Atomic Swaps demo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile, test (including JS <-> Scala TestnetKitParitySpec), and run demo
         run: sbt "test" "run demo"

@@ -33,7 +33,8 @@ object AtomicSwapApp {
       "ScriptlessAdaptorSwap" -> AtomicSwapContracts.compileV6(AtomicSwapContracts.ScriptlessAdaptorSwapScript)
     )
     specs.foreach { case (name, (tree, bytes)) =>
-      println(f"  [$name%-24s] ErgoTree = ${bytes.length}%4d B | Mainnet P2S: ${AtomicSwapContracts.p2sAddress(tree, mainnet = true).take(28)}...")
+      println(f"  [$name%-24s] ErgoTree = ${bytes.length}%4d B | Testnet P2S: ${AtomicSwapContracts.p2sAddress(tree, mainnet = false)}")
+      println(s"    ErgoTreeHex: ${Base16.encode(bytes)}")
     }
     val tSec = new BigInteger("1234567890123456789012345678901234567890")
     val tPt  = AdaptorCrypto.point(tSec)
