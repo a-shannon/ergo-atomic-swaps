@@ -17,13 +17,13 @@ Open [the live lab](https://a-shannon.github.io/ergo-atomic-swaps/) to:
 - Fetch live Ergo Testnet block height and watch real unspent PTLC (`83 B`) and HTLC (`255 B`) boxes at both verified Testnet P2S addresses (a live 83 B PTLC demo box is visible in the watcher!).
 - Connect **Nautilus** (hard-guarded to Testnet only) for **1-click Lock, PTLC Refund, HTLC Claim, and HTLC Timeout Refund** — or export offline EIP-12 JSON without any wallet installed (all 1-click spend builders are verified against Scala `SigmaPropVerifier 6.0.3` in `TestnetKitParitySpec`).
 
-### Verified Live On-Chain Ergo Testnet Execution (`ergo-6.0.8`)
+### Verified On-Chain Ergo Testnet Execution (Mined & Confirmed in Block `#669,944`)
 
-| Contract | Live On-Chain Action | Proof / Cost | Ergo Testnet Explorer |
-| :--- | :--- | :---: | :--- |
-| **`ScriptlessAdaptorSwap` (`83 B`)** | Lock `0.10 tERG` (`T = t·G`, zero hashlock!) + live watcher box | `56 B` / `403` | [`8a74c5a6…`](https://testnet.ergoplatform.com/en/transactions/8a74c5a687da22ae6a7b95303f7fc442c402255ccee89c0432c508c736ec7a22) |
-| **`ScriptlessAdaptorSwap` (`83 B`)** | **Zero-Hash Adaptor Claim (`proveDlog(claimant) && proveDlog(T)`)** | `88 B` / `983` | [`2ed59f71…`](https://testnet.ergoplatform.com/en/transactions/2ed59f711f488603cb6d79ca041954c7207317d8ad764f9ea8c901c1628e1e37) |
-| **`CrossChainHashSwap` (`255 B`)** | **0-Sig Gasless Submarine Relayer (`mode=1L`, `R4=SELF.id`)** | **`0 B`** / `172` | [`cb9ae260…`](https://testnet.ergoplatform.com/en/transactions/cb9ae260e79a913d1d9099b59f878b243bd6704f6508390b554cfd7ed002cd2d) |
+| Contract | Confirmed On-Chain Action | Block | Proof / Cost | Ergo Testnet Explorer |
+| :--- | :--- | :---: | :---: | :--- |
+| **Batch Lock** | Lock `ScriptlessAdaptorSwap` (83 B) & `CrossChainHashSwap` (255 B) | **`#669,944`** | `56 B` / `403` | [`a1a0519d…`](https://testnet.ergoplatform.com/en/transactions/a1a0519ded94a61dd83ed962e86b536f2032878efd433137dc2a9807bb1f3828) |
+| **`ScriptlessAdaptorSwap` (`83 B`)** | **Zero-Hash Adaptor Claim (`proveDlog(claimant) && proveDlog(T)`)** | **`#669,944`** | `88 B` / `983` | [`e48e58c3…`](https://testnet.ergoplatform.com/en/transactions/e48e58c35974118c7547107baa0e3512d96f18614b94960792c58e6f1577daaa) |
+| **`CrossChainHashSwap` (`255 B`)** | **0-Sig Gasless Submarine Relayer (`mode=1L`, `R4=SELF.id`)** | **`#669,944`** | **`0 B`** / `172` | [`7113d757…`](https://testnet.ergoplatform.com/en/transactions/7113d7577681599ea230a966dc33268e243b793f228d76b0b67a9a52a59ec6c0) |
 
 ---
 
