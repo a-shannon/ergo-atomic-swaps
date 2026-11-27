@@ -1,19 +1,20 @@
 /**
- * Ergo Testnet & Nautilus EIP-12 Browser Kit (`ergo-testnet-kit.js`) v1.1.0 — Zero Dependencies.
+ * Ergo Testnet & Nautilus EIP-12 Browser Kit (`ergo-testnet-kit.js`) v1.2.0 — Zero Dependencies.
  *
  * A drop-in, MIT-licensed Pure-JS library for connecting any static web app / GitHub Page
- * directly to the live Ergo Testnet (via public Explorer API or a local Ergo Node) and the
- * Nautilus EIP-12 browser wallet (`window.ergoConnector.nautilus`):
+ * directly to the live Ergo Testnet (via public Explorer API or a local/custom Ergo Node with
+ * smart multi-endpoint failover & stale-indexer lag detection) and the Nautilus EIP-12 wallet:
  *
  *   1. Exact RFC 7693 Blake2b-256 (matching Ergo Sigma `blake2b256` bit-for-bit)
  *   2. Exact Ergo Base58Check Address Encoder / Decoder (P2PK & P2S, Testnet/Mainnet guard)
  *   3. Exact Sigma `ValueSerializer` Constant Encoders AND Decoders (`SByte`, `SInt`, `SLong`,
  *      `SGroupElement`, `Coll[Byte]`, `Coll[Long]`, `Coll[GroupElement]`, `Coll[Coll[Byte]]`) —
  *      proven 100% byte-for-byte against Ergo's official Scala `sigma-state 6.0.3` in CI!
- *   4. Live Ergo Testnet Explorer (`https://api-testnet.ergoplatform.com`, CORS `*`) & Node REST client
+ *   4. Multi-endpoint Live Ergo Testnet REST client (`fetchBestNetworkState`, stale-indexer lag
+ *      detection, automatic Explorer <-> Ergo Node fallback, `fetchUnspentBoxes`, `submitSignedTx`)
  *   5. Nautilus EIP-12 Wallet Connect (hard Testnet safety guard), UTXO coin selection with full
- *      token-change preservation, canonical Miner Fee output, AND 1-click P2S Spend / Veto / Sweep /
- *      Claim / Refund EIP-12 transaction builders proven against Scala `SigmaPropVerifier 6.0.3` in CI!
+ *      token-change preservation, canonical Miner Fee output, AND 1-click P2S Lock / Spend /
+ *      Sweep / Veto / 0-Sig Finalize / Claim / Refund builders verified against Scala 6.0.3 in CI!
  *
  * Usage in any browser page:
  *   <script src="https://a-shannon.github.io/lib/ergo-testnet-kit.js"></script>
@@ -24,6 +25,7 @@
   "use strict";
 
   const DEFAULT_TESTNET_API = "https://api-testnet.ergoplatform.com";
+  const DEFAULT_LOCAL_NODE = "http://127.0.0.1:9052";
   const TESTNET_EXPLORER_WEB = "https://testnet.ergoplatform.com/en";
   // Official Ergo consensus Miner Fee ErgoTree (fee proposition):
   const MINER_FEE_ERGO_TREE =
@@ -398,25 +400,61 @@
     const base = apiBase.replace(/\/+$/, "");
     try {
       const data = await fetchJson(`${base}/api/v1/networkState`);
+      let lastBlockTs = null;
+      try {
+        const blks = await fetchJson(`${base}/api/v1/blocks?limit=1`);
+        if (blks && blks.items && blks.items.length) lastBlockTs = Number(blks.items[0].timestamp || 0) || null;
+      } catch (_) {}
+      const lagMinutes = lastBlockTs ? Math.max(0, Math.round((Date.now() - lastBlockTs) / 60000)) : null;
       return {
         source: "explorer",
         apiBase: base,
         height: Number(data.height),
         lastBlockId: data.lastBlockId,
         blockVersion: data.params ? data.params.blockVersion : null,
+        lastBlockTimestamp: lastBlockTs,
+        lagMinutes,
+        isStale: lagMinutes !== null && lagMinutes > 30,
         explorerWeb: TESTNET_EXPLORER_WEB
       };
     } catch (_) {
       const info = await fetchJson(`${base}/info`);
+      const lastBlockTs = Number(info.lastMemPoolUpdateTime || 0) || null;
       return {
         source: "node",
         apiBase: base,
         height: Number(info.fullHeight || info.headersHeight || 0),
         lastBlockId: info.bestFullHeaderId || null,
         appVersion: info.appVersion || null,
+        lastBlockTimestamp: lastBlockTs,
+        lagMinutes: 0,
+        isStale: false,
         explorerWeb: TESTNET_EXPLORER_WEB
       };
     }
+  }
+
+  /**
+   * Smart Multi-Endpoint Auto-Failover: probes all provided Testnet endpoints in parallel
+   * (e.g. local Ergo node `http://127.0.0.1:9052` + public Explorer `https://api-testnet.ergoplatform.com`)
+   * and automatically selects the healthy endpoint with the HIGHEST live block height!
+   */
+  async function fetchBestNetworkState(endpoints = [DEFAULT_LOCAL_NODE, DEFAULT_TESTNET_API]) {
+    const unique = Array.from(new Set(endpoints.filter(Boolean).map(e => String(e).trim().replace(/\/+$/, ""))));
+    const settled = await Promise.all(
+      unique.map(ep =>
+        Promise.race([
+          fetchNetworkState(ep),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4500))
+        ]).then(v => ({ ok: true, v })).catch(e => ({ ok: false, ep, err: e.message }))
+      )
+    );
+    const live = settled.filter(s => s.ok).map(s => s.v);
+    if (!live.length) throw new Error("All Testnet endpoints unreachable: " + settled.map(s => `${s.ep} (${s.err})`).join("; "));
+    live.sort((a, b) => b.height - a.height);
+    const best = live[0];
+    best.candidates = live.map(c => ({ apiBase: c.apiBase, source: c.source, height: c.height, isStale: c.isStale }));
+    return best;
   }
 
   async function fetchUnspentBoxes(address, apiBase = DEFAULT_TESTNET_API, limit = 20) {
@@ -752,6 +790,51 @@
   }
 
   /**
+   * 1-Click SocialRecoveryWallet Permissionless 0-Signature Recovery Finalize (`mode = 3L`).
+   * Allowed by anyone once `HEIGHT >= unlockHeight` with ZERO signatures (`proofBytes = ""`).
+   */
+  function buildEip12SocialFinalizeTx(params) {
+    const box = normalizeBoxForEip12(params.walletBox, { "0": Sigma.encodeLong(3n) });
+    const guardHex = regHex(box, "R5");
+    const propHex  = regHex(box, "R6");
+    const stHex    = regHex(box, "R7");
+    if (!guardHex || !propHex || !stHex) throw new Error("SocialRecoveryWallet box missing R5/R6/R7.");
+    const st = Sigma.decodeLongArray(stHex);
+    const [phase, threshold, delayBlks, unlockH] = st;
+    const height = BigInt(params.creationHeight);
+    if (phase !== 1n) throw new Error("Wallet is not in RECOVERY_PENDING state (phase must be 1).");
+    if (height < unlockH) throw new Error(`Timelock not elapsed yet: height #${height} < unlockHeight #${unlockH} (${unlockH - height} blocks remaining).`);
+    const feeNano = BigInt(params.feeNanoErg != null ? params.feeNanoErg : DEFAULT_FEE);
+    if (feeNano > 2000000n) throw new Error("Finalize fee cap in SocialRecoveryWallet is 0.002 ERG (2,000,000 nanoERG).");
+    const outVal = BigInt(box.value) - feeNano;
+    return {
+      inputs: [box],
+      dataInputs: [],
+      outputs: [
+        {
+          value: outVal.toString(),
+          ergoTree: box.ergoTree,
+          assets: box.assets,
+          additionalRegisters: {
+            R4: propHex,
+            R5: guardHex,
+            R6: propHex,
+            R7: Sigma.encodeLongArray([0n, threshold, delayBlks, 0n])
+          },
+          creationHeight: Number(height)
+        },
+        {
+          value: feeNano.toString(),
+          ergoTree: MINER_FEE_ERGO_TREE,
+          assets: [],
+          additionalRegisters: {},
+          creationHeight: Number(height)
+        }
+      ]
+    };
+  }
+
+  /**
    * 1-Click ScriptlessAdaptorSwap (83 B PTLC) Maker Timeout Refund (Branch B: `HEIGHT >= refundHeight && proveDlog(makerPk)`).
    */
   function buildEip12PtlcRefundTx(params) {
@@ -855,8 +938,9 @@
   }
 
   const api = {
-    VERSION: "1.1.0",
+    VERSION: "1.2.0",
     DEFAULT_TESTNET_API,
+    DEFAULT_LOCAL_NODE,
     TESTNET_EXPLORER_WEB,
     MINER_FEE_ERGO_TREE,
     blake2b256,
@@ -872,6 +956,7 @@
     regHex,
     normalizeBoxForEip12,
     fetchNetworkState,
+    fetchBestNetworkState,
     fetchUnspentBoxes,
     submitSignedTx,
     connectNautilus,
@@ -879,6 +964,7 @@
     buildEip12DailyHotSpendTx,
     buildEip12DailyColdSweepTx,
     buildEip12SocialOwnerTx,
+    buildEip12SocialFinalizeTx,
     buildEip12PtlcRefundTx,
     buildEip12HtlcSpendTx,
     signAndSubmitNautilus

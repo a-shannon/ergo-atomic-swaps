@@ -48,6 +48,8 @@
     table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
     th, td { border-bottom: 1px solid #1e2d4f; padding: 8px 10px; text-align: left; }
     th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .stale-banner { display:none; margin:10px 0; padding:10px 14px; border-radius:10px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.5); color:#fde68a; font-size:12.5px; }
+    .proof-strip { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.35); font-size:12px; align-items:center; }
     footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 20px; border-top: 1px solid var(--border); }
     a { color: var(--accent); }
   </style>
@@ -77,18 +79,25 @@
 <main>
   <!-- LIVE TESTNET + NAUTILUS EIP-12 SWAP PANEL -->
   <section class="panel live-panel">
-    <h2>Live Ergo Testnet &amp; Nautilus EIP-12 Swap Lock (Zero Backend · Testnet Safety Guard)</h2>
+    <h2>Live Ergo Testnet &amp; Nautilus EIP-12 Swap Lock (<code>ergo-testnet-kit.js</code> v1.2.0 · Zero Backend)</h2>
     <p class="desc">
-      Powered by <code>ergo-testnet-kit.js</code> (proven byte-for-byte against Scala <code>sigma-state 6.0.3</code> in CI).
+      Powered by <code>ergo-testnet-kit.js v1.2.0</code> (multi-endpoint auto-failover + stale-indexer detection, proven byte-for-byte against Scala <code>sigma-state 6.0.3</code> in CI).
       Watch live Testnet PTLC / HTLC boxes, compute real SHA-256 hashlocks &amp; Blake2b-256 submarine-relay payHashes, export offline EIP-12 JSON, or sign &amp; broadcast live on Ergo Testnet with <strong>Nautilus</strong> (Mainnet is hard-blocked).
     </p>
+    <div id="staleBanner" class="stale-banner"></div>
+    <div class="proof-strip">
+      <b style="color:#86efac;">✔ Verified Mined Testnet Proofs (Block #669,944):</b>
+      <a href="https://testnet.ergoplatform.com/en/transactions/e48e58c35974118c7547107baa0e3512d96f18614b94960792c58e6f1577daaa" target="_blank" rel="noopener">83 B Zero-Hash PTLC Claim ↗</a> ·
+      <a href="https://testnet.ergoplatform.com/en/transactions/7113d7577681599ea230a966dc33268e243b793f228d76b0b67a9a52a59ec6c0" target="_blank" rel="noopener">0-Sig HTLC Gasless Submarine Relay (0 B Proof!) ↗</a>
+    </div>
 
-    <div class="grid2">
+    <div class="grid2" style="margin-top:12px;">
       <div>
-        <label>Ergo Testnet Explorer or Local Node API URL</label>
+        <label>Ergo Testnet Local Node or Explorer API (Auto-Failover Picks Highest Tip)</label>
         <input id="tnApiUrl" value="https://api-testnet.ergoplatform.com" />
         <div class="row">
-          <button class="btn" onclick="refreshTestnet()">Refresh Testnet Height &amp; Watch Swaps</button>
+          <button class="btn" onclick="refreshTestnet()">Auto-Sync Highest Endpoint &amp; Watch Swaps</button>
+          <button class="btn sec" onclick="document.getElementById('tnApiUrl').value=KIT.DEFAULT_LOCAL_NODE;refreshTestnet();">Use Local Node (127.0.0.1:9052)</button>
           <button class="btn ok" onclick="connectNautilusWallet()">Connect Nautilus (Testnet Only)</button>
         </div>
         <div class="box" id="walletStatusBox" style="margin-top:12px;">
@@ -331,21 +340,31 @@ function toggleSwapFields() {
 }
 
 async function refreshTestnet() {
-  const apiBase = document.getElementById("tnApiUrl").value.trim() || KIT.DEFAULT_TESTNET_API;
+  const inputBase = document.getElementById("tnApiUrl").value.trim() || KIT.DEFAULT_TESTNET_API;
+  const staleEl = document.getElementById("staleBanner");
   try {
-    const st = await KIT.fetchNetworkState(apiBase);
+    const st = await KIT.fetchBestNetworkState([inputBase, KIT.DEFAULT_LOCAL_NODE, KIT.DEFAULT_TESTNET_API]);
+    const activeBase = st.apiBase;
     liveHeight = st.height;
     document.getElementById("liveHeightMetric").textContent = `#${st.height.toLocaleString()}`;
-    document.getElementById("liveSourceMetric").textContent = `${st.source} · blockVer ${st.blockVersion || "v6"}`;
+    document.getElementById("liveSourceMetric").textContent = `${st.source}${st.isStale ? " · LAGGING" : " · LIVE"} · ${activeBase.replace(/^https?:\/\//, "")}`;
+    if (st.isStale) {
+      staleEl.style.display = "block";
+      staleEl.innerHTML =
+        `<b>⚠ Public Testnet Indexer Lag Detected (${st.lagMinutes} min behind real chain tip):</b> ` +
+        `<code>${activeBase}</code> is at <code>#${st.height.toLocaleString()}</code>. Click <b>Use Local Node</b> if you run a synced local Testnet node on <code>127.0.0.1:9052</code>.`;
+    } else {
+      staleEl.style.display = "none";
+    }
     const [pBoxes, hBoxes] = await Promise.all([
-      KIT.fetchUnspentBoxes(P2S_PTLC, apiBase, 10),
-      KIT.fetchUnspentBoxes(P2S_HTLC, apiBase, 10)
+      KIT.fetchUnspentBoxes(P2S_PTLC, activeBase, 10),
+      KIT.fetchUnspentBoxes(P2S_HTLC, activeBase, 10)
     ]);
     watchedPtlcBoxes = pBoxes.items || [];
     watchedHtlcBoxes = hBoxes.items || [];
     renderP2SSummary(pBoxes.total, hBoxes.total);
     renderLiveSwapsList();
-    tnLog(`[Testnet Live ✔] Height #${st.height.toLocaleString()} (${st.apiBase}) · PTLC boxes=${pBoxes.total} · HTLC boxes=${hBoxes.total}`, "okt");
+    tnLog(`[Testnet Sync ✔] Highest endpoint ${activeBase} (#${st.height.toLocaleString()}, ${st.source}${st.isStale ? ", stale " + st.lagMinutes + "m" : ""}) · PTLC=${pBoxes.total} · HTLC=${hBoxes.total}`, st.isStale ? "warnt" : "okt");
     for (const b of pBoxes.items.slice(0, 3)) {
       tnLog(`  [PTLC Box] ${b.boxId.slice(0, 16)}… · ${(Number(b.value)/1e9).toFixed(4)} tERG · created @ #${b.creationHeight}`, "infot");
     }
