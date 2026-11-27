@@ -14,8 +14,16 @@ Both reference contracts are verified **100% byte-for-byte** against the officia
 ## Live Ergo Testnet + Nautilus EIP-12 Support
 
 Open [the live lab](https://a-shannon.github.io/ergo-atomic-swaps/) to:
-- Fetch live Ergo Testnet block height and watch real unspent PTLC (`83 B`) and HTLC (`255 B`) boxes at both verified Testnet P2S addresses.
-- Connect **Nautilus** (hard-guarded to Testnet only) to build, sign, and broadcast real `ScriptlessAdaptorSwap` or `CrossChainHashSwap` lock transactions — or export offline EIP-12 JSON without any wallet installed.
+- Fetch live Ergo Testnet block height and watch real unspent PTLC (`83 B`) and HTLC (`255 B`) boxes at both verified Testnet P2S addresses (a live 83 B PTLC demo box is visible in the watcher!).
+- Connect **Nautilus** (hard-guarded to Testnet only) for **1-click Lock, PTLC Refund, HTLC Claim, and HTLC Timeout Refund** — or export offline EIP-12 JSON without any wallet installed (all 1-click spend builders are verified against Scala `SigmaPropVerifier 6.0.3` in `TestnetKitParitySpec`).
+
+### Verified Live On-Chain Ergo Testnet Execution (`ergo-6.0.8`)
+
+| Contract | Live On-Chain Action | Proof / Cost | Ergo Testnet Explorer |
+| :--- | :--- | :---: | :--- |
+| **`ScriptlessAdaptorSwap` (`83 B`)** | Lock `0.10 tERG` (`T = t·G`, zero hashlock!) + live watcher box | `56 B` / `403` | [`8a74c5a6…`](https://testnet.ergoplatform.com/en/transactions/8a74c5a687da22ae6a7b95303f7fc442c402255ccee89c0432c508c736ec7a22) |
+| **`ScriptlessAdaptorSwap` (`83 B`)** | **Zero-Hash Adaptor Claim (`proveDlog(claimant) && proveDlog(T)`)** | `88 B` / `983` | [`2ed59f71…`](https://testnet.ergoplatform.com/en/transactions/2ed59f711f488603cb6d79ca041954c7207317d8ad764f9ea8c901c1628e1e37) |
+| **`CrossChainHashSwap` (`255 B`)** | **0-Sig Gasless Submarine Relayer (`mode=1L`, `R4=SELF.id`)** | **`0 B`** / `172` | [`cb9ae260…`](https://testnet.ergoplatform.com/en/transactions/cb9ae260e79a913d1d9099b59f878b243bd6704f6508390b554cfd7ed002cd2d) |
 
 ---
 
