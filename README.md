@@ -1,0 +1,51 @@
+# Ergo Atomic Swaps — Cross-Chain SHA-256 HTLC & Scriptless Adaptor PTLC (Sigma v6)
+
+[![CI](https://github.com/a-shannon/ergo-atomic-swaps/actions/workflows/ci.yml/badge.svg)](https://github.com/a-shannon/ergo-atomic-swaps/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**Live Interactive Lab:** [https://a-shannon.github.io/ergo-atomic-swaps/](https://a-shannon.github.io/ergo-atomic-swaps/)
+
+Trustless cross-chain swap primitives on **Ergo Sigma v6 (`treeVersion = 3`)** featuring both hardened Bitcoin/Lightning/EVM-compatible SHA-256 HTLCs and **Zero-Hash Scriptless Adaptor-Signature PTLCs (`83 B` ErgoTree!)** that break on-chain cross-chain hash linkability.
+
+Both reference contracts are verified **100% byte-for-byte** against the official Ergo v6 reference node (`ergo-6.0.3.jar`).
+
+---
+
+## Why Scriptless Adaptor Swaps Matter (Plain English)
+
+Classic atomic swaps lock Bitcoin and Ergo with the **exact same `SHA-256(preimage)` hash**, allowing any chain-analysis bot to instantly correlate both legs of the swap.
+
+With **`ScriptlessAdaptorSwap` (`83 B`)**:
+1. Instead of a hashlock, the swap locks to an elliptic-curve point **`T = t · G`** (an Adaptor Point).
+2. On Bitcoin (Taproot Schnorr), Bob completes his adaptor pre-signature `s' = k + e·x_B` into a valid on-chain signature `s = s' + t (mod n)`.
+3. Alice observes `(R, s)` on Bitcoin, computes **`t = (s - s') mod n`** in one subtraction, and spends Ergo's `proveDlog(claimantPk) && proveDlog(T)` box!
+4. **Zero `SHA-256` hash ever touches Ergo** — and multi-hop submarine relays re-randomize `T_2 = T_1 + delta · G` so hops are cryptographically unlinkable!
+
+---
+
+## Contracts & Measured Benchmarks (`sigma-state 6.0.3` / `ergo-6.0.3.jar`)
+
+| Contract | Action | ErgoTree Size | Measured Execution Cost (1M Block Limit) |
+| :--- | :--- | :---: | :--- |
+| **`CrossChainHashSwap`** | Direct Signed Claim (`sha256` 32B preimage) | **255 B** | **520** (`0.05%`, `56 B` proof) |
+| **`CrossChainHashSwap`** | Gasless Submarine Relayer Sweep (`SELF.tokens` + `SELF.id`) | **255 B** | **175** (`0.02%`, **0 B proof / 0 sigs!**) |
+| **`CrossChainHashSwap`** | Maker Timeout Refund (0 context vars) | **255 B** | **509** (`0.05%`) |
+| **`ScriptlessAdaptorSwap`** | **Zero-Hash PTLC Claim (Live Schnorr Extraction `t = s - s'`)** | **83 B** | **983** (`0.10%`, `88 B` proof) |
+| **`ScriptlessAdaptorSwap`** | Unlinkable Hop-2 Re-Randomized PTLC (`T2 = T1 + delta·G`) | **83 B** | **983** (`0.10%`) |
+
+---
+
+## Quick Start
+
+```bash
+sbt "test" "run demo"
+sbt "run node-parity http://127.0.0.1:9052"
+```
+
+See [DESIGN.md](DESIGN.md) for the complete Schnorr adaptor extraction math and eUTXO HTLC hardening invariants.
+
+---
+
+## Scope & Disclaimer
+
+Open-source MIT reference implementation, executable `sigma-state 6.0.3` test suite, and educational browser simulator — not externally audited or deployed with live mainnet funds.
