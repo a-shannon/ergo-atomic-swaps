@@ -154,6 +154,9 @@
       <button class="btn sec" onclick="copyBuiltJson()">Copy EIP-12 JSON</button>
       <button class="btn sec" onclick="downloadBuiltJson()">Download .json</button>
     </div>
+
+    <h3>Live On-Chain Testnet Swap Boxes — 1-Click Claim / Refund (EIP-12 Verified vs Scala 6.0.3)</h3>
+    <div id="liveSwapsList" class="box">Click "Refresh Testnet Height &amp; Watch Swaps" above to inspect live PTLC / HTLC boxes and trigger 1-click HTLC Claim or Timeout Refund!</div>
     <div class="console" id="tnConsole"></div>
   </section>
 
@@ -220,6 +223,75 @@ const P2S_HTLC = KIT.encodeP2S(CONTRACTS.htlc.treeHex, "testnet");
 let liveHeight = 666000;
 let walletCtx = null;
 let lastBuiltJson = "";
+let watchedPtlcBoxes = [];
+let watchedHtlcBoxes = [];
+
+function renderLiveSwapsList() {
+  const el = document.getElementById("liveSwapsList");
+  const rows = [];
+  watchedPtlcBoxes.slice(0, 6).forEach((b, idx) => {
+    let meta = "";
+    try {
+      const refH = KIT.Sigma.decodeLong(KIT.regHex(b, "R7"));
+      meta = `refundHeight #${refH} (${BigInt(liveHeight) >= refH ? "REFUNDABLE NOW" : (refH - BigInt(liveHeight)) + " blks left"})`;
+    } catch (_) { meta = "custom registers"; }
+    rows.push(
+      `<div style="padding:8px 0;border-bottom:1px solid #1e2d4f;">` +
+      `<b>[83 B PTLC]</b> <code>${b.boxId.slice(0,16)}…</code> · <b>${(Number(b.value)/1e9).toFixed(4)} tERG</b> · ${meta}` +
+      `<div class="row" style="margin-top:6px;">` +
+      `<button class="btn" onclick="runOneClickSwap('ptlc-refund', ${idx}, false)">1-Click PTLC Refund (JSON)</button>` +
+      `<button class="btn ok" onclick="runOneClickSwap('ptlc-refund', ${idx}, true)">1-Click PTLC Refund (Nautilus)</button>` +
+      `</div></div>`
+    );
+  });
+  watchedHtlcBoxes.slice(0, 6).forEach((b, idx) => {
+    let meta = "";
+    try {
+      const cfg = KIT.Sigma.decodeLongArray(KIT.regHex(b, "R7"));
+      meta = `refundHeight #${cfg[0]} · maxRelayFee ${(Number(cfg[1])/1e9).toFixed(4)} tERG`;
+    } catch (_) { meta = "custom registers"; }
+    rows.push(
+      `<div style="padding:8px 0;border-bottom:1px solid #1e2d4f;">` +
+      `<b>[255 B HTLC]</b> <code>${b.boxId.slice(0,16)}…</code> · <b>${(Number(b.value)/1e9).toFixed(4)} tERG</b> · ${meta}` +
+      `<div class="row" style="margin-top:6px;">` +
+      `<button class="btn purple" onclick="runOneClickSwap('htlc-claim', ${idx}, false)">1-Click HTLC Claim (JSON)</button>` +
+      `<button class="btn ok" onclick="runOneClickSwap('htlc-claim', ${idx}, true)">1-Click HTLC Claim (Nautilus)</button>` +
+      `<button class="btn sec" onclick="runOneClickSwap('htlc-refund', ${idx}, true)">1-Click Timeout Refund (Nautilus)</button>` +
+      `</div></div>`
+    );
+  });
+  el.innerHTML = rows.length ? rows.join("") : "No unspent swap boxes currently at these Testnet P2S addresses — lock a Testnet PTLC/HTLC box above to watch and spend it in 1 click!";
+}
+
+async function runOneClickSwap(action, idx, submitViaNautilus) {
+  try {
+    const recipAddr = walletCtx
+      ? walletCtx.changeAddress
+      : KIT.encodeP2PK(resolveKey(document.getElementById("swMaker").value, "Recipient").pubKeyHex, "testnet");
+    let tx, label;
+    if (action === "ptlc-refund") {
+      tx = KIT.buildEip12PtlcRefundTx({ swapBox: watchedPtlcBoxes[idx], recipientAddress: recipAddr, creationHeight: liveHeight });
+      label = `ScriptlessAdaptorSwap PTLC Timeout Refund -> ${recipAddr.slice(0,12)}…`;
+    } else if (action === "htlc-claim") {
+      const preimage = document.getElementById("swPreimage").value.trim();
+      tx = KIT.buildEip12HtlcSpendTx({ swapBox: watchedHtlcBoxes[idx], action: "claim", preimage, recipientAddress: recipAddr, creationHeight: liveHeight });
+      label = `CrossChainHashSwap Direct HTLC Claim -> ${recipAddr.slice(0,12)}…`;
+    } else {
+      tx = KIT.buildEip12HtlcSpendTx({ swapBox: watchedHtlcBoxes[idx], action: "refund", recipientAddress: recipAddr, creationHeight: liveHeight });
+      label = `CrossChainHashSwap Maker Timeout Refund -> ${recipAddr.slice(0,12)}…`;
+    }
+    lastBuiltJson = JSON.stringify(tx, null, 2);
+    tnLog(`[1-Click EIP-12 Built ✔] ${label}\n${lastBuiltJson}`, "okt");
+    if (submitViaNautilus) {
+      if (!walletCtx) throw new Error("Connect Nautilus (Testnet) first before signing.");
+      const res = await KIT.signAndSubmitNautilus(tx);
+      tnLog(`[BROADCAST SUCCESS ✔] ${label}\n  TxId: ${res.txId}\n  Explorer: ${res.explorerUrl}`, "okt");
+      setTimeout(refreshTestnet, 3500);
+    }
+  } catch (e) {
+    tnLog(`[1-Click Swap Spend Error] ${e.message}`, "badt");
+  }
+}
 
 function tnLog(msg, cls = "infot") {
   const el = document.getElementById("tnConsole");
@@ -269,7 +341,10 @@ async function refreshTestnet() {
       KIT.fetchUnspentBoxes(P2S_PTLC, apiBase, 10),
       KIT.fetchUnspentBoxes(P2S_HTLC, apiBase, 10)
     ]);
+    watchedPtlcBoxes = pBoxes.items || [];
+    watchedHtlcBoxes = hBoxes.items || [];
     renderP2SSummary(pBoxes.total, hBoxes.total);
+    renderLiveSwapsList();
     tnLog(`[Testnet Live ✔] Height #${st.height.toLocaleString()} (${st.apiBase}) · PTLC boxes=${pBoxes.total} · HTLC boxes=${hBoxes.total}`, "okt");
     for (const b of pBoxes.items.slice(0, 3)) {
       tnLog(`  [PTLC Box] ${b.boxId.slice(0, 16)}… · ${(Number(b.value)/1e9).toFixed(4)} tERG · created @ #${b.creationHeight}`, "infot");
